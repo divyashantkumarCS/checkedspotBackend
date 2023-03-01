@@ -13,4 +13,5 @@ const serverlistner = function() {
     })
 }
 
-export {PORT, app, serverlistner};
+// export default express;
+export {PORT, app, serverlistner, express};
