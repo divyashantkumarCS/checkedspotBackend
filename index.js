@@ -3,6 +3,7 @@ import driver from './config/neo4jconfig.js';
 import { app, serverlistner, express } from './config/expressConfig.js';
 import userRouter from './routes/user.js';
 import propertyRouter from './routes/property.js';
+import projectRouter from  './routes/project.js'
 
 // for parsing application/json
 app.use(express.json()); 
@@ -17,7 +18,7 @@ app.use(express.static('uploads'));
 
 app.use('/users', userRouter);
 app.use('/properties', propertyRouter);
-
+app.use('/project', projectRouter)
 
 
 driver.close();

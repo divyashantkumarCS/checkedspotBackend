@@ -1,17 +1,42 @@
 import driver from "../config/neo4jconfig.js ";
-import { int } from 'neo4j-driver';
+import { int, session } from 'neo4j-driver';
 
 
 const getAllProperties = async (req, res) => {
     try {
         const session = driver.session();
     
+        //Promise API
         const result = await session.executeRead(tx => tx.run(
             `
                 MATCH (p:Person)-[r:RELATED_TO]->(prop:Property)
                 return p, prop, ID(p), ID(prop) 
             `,{}
         ));
+
+        //Streaming API
+        // session.executeRead(tx => tx.run(
+        //     `
+        //         MATCH (p:Person)-[r:RELATED_TO]->(prop:Property)
+        //         return p, prop, ID(p), ID(prop) 
+        //     `,{}
+        // )).subscribe({
+        //     onKeys: keys => {
+        //       console.log(keys) // ['name]
+        //     },
+        //     onNext: record => {
+        //       console.log(record.get('name')) // 'Alice'
+        //     },
+        //     onCompleted: (summary) => {
+        //       // `summary` holds the same information as `res.summary`
+        
+        //       // Close the Session
+        //       session.close()
+        //     },
+        //     onError: error => {
+        //       console.log(error)
+        //     }
+        // })
     
         const data = result?.records?.map(row => {
             return {
@@ -48,7 +73,7 @@ const getAllProperties = async (req, res) => {
     }finally {
         console.log("Sessions")
     }
-}
+};
 
 
 const addProperty= async (req, res) => {
@@ -93,9 +118,22 @@ const addProperty= async (req, res) => {
                 prop.parkingLot = $parkingLot, 
                 prop.alevator = $alevator,
                 prop.furnishedStatus = $furnishedStatus,
-                prop.imageData = $imageData
-            MERGE (p)-[r:RELATED_TO]->(prop)
-            SET r.relationship = $ownershipType
+                prop.imageData = $imageData,
+                prop.personID = ID(p)
+            MERGE (exp:Expenditure {propertyID : ID(prop)})
+            MERGE (oth:Other {propertyID : ID(prop)})
+            MERGE (doc:Document {propertyID : ID(prop)})
+            MERGE (p)-[cr:CREATED]->(prop)
+            SET cr.dateOfCreation = $dateOfCreation
+
+            MERGE (p)-[:HAS_WRITE_ACCESS]->(prop)
+            MERGE (p)-[:HAS_WRITE_ACCESS]->(exp)
+            MERGE (p)-[:HAS_WRITE_ACCESS]->(oth)
+            MERGE (p)-[:HAS_WRITE_ACCESS]->(doc)
+
+            MERGE (exp)-[:BELONGS_TO]->(prop)
+            MERGE (oth)-[:BELONGS_TO]->(prop)
+            MERGE (doc)-[:BELONGS_TO]->(prop)
             RETURN p, prop, ID(p), ID(prop)       
         `,{
             personName : obj.name,
@@ -113,7 +151,8 @@ const addProperty= async (req, res) => {
             parkingLot : obj.parkingLot,
             alevator : obj.alevator,
             furnishedStatus : obj.furnishedStatus,
-            imageData : obj.imageData
+            imageData : obj.imageData,
+            dateOfCreation : (new Date()).toDateString()
         }
     ))
 
@@ -148,8 +187,7 @@ const addProperty= async (req, res) => {
         "message": "Property added Successfully",
         "data" : data
     })
-}
-
+};
 
 const deleteProperty = async (req, res) => {
     const propID = int(req.body.id);
@@ -185,7 +223,7 @@ const deleteProperty = async (req, res) => {
         "propertyID" : propID,
         "message" : "Node deleted successfully"
     })
-}
+};
 
 
 const updateproperty = async (req, res) => {
@@ -215,6 +253,79 @@ const updateproperty = async (req, res) => {
         "updatedData" : data,
         "message" : "Node updated successfully"
     })
-}
+};
 
-export { getAllProperties, addProperty, updateproperty, deleteProperty } 
+const updateExpenditure = async (req, res) => {
+    const propertyID = req?.body?.propertyID;
+    const expenditure = req?.body?.expenditure;
+
+    //Fetch expenditure 
+    const session01 = driver.session();
+    const result01 = session01.executeRead(
+        tx => tx.run(
+            `
+                MATCH (ex:Expenditure {propertyID : $propertyID})
+                RETURN ex
+            `,
+            {
+                propertyID : req?.body?.propertyID
+            }
+        )
+    )
+
+    session01.close();
+
+    const data01 = result01?.records[0].get('ex').properties.expenditures;        
+    data.push(expenditure);
+
+
+    /// update with new expenditure data
+    const session02 = driver.session();
+
+    const result02 = session.executeWrite(
+        tx => tx.run(
+            `
+                MATCH (ex:Expenditure {propertyID : $propertyID})
+                SET ex.expenditures = $expenditures
+                RETURN ex
+            `,
+            {
+                expenditures : data01
+            }
+        )
+    )
+    session02.close();
+    const data = result01?.records[0].get('ex').properties.expenditures;
+
+    res.status(200).send({
+        "message" : "Data Updated Seccessfully",
+        "data" : data
+    })
+};
+
+export { 
+    getAllProperties, 
+    addProperty, 
+    updateproperty, 
+    deleteProperty,
+    updateExpenditure 
+}; 
+
+// documents = [{
+//     type : "",
+//     label: "",
+//     file: "",
+// }]
+
+// Expenditure = [
+//     {
+//         type : "construction",
+//         spentBy : "kashif",
+//         spentOn : "12/12/2022",
+//         amount:3000,
+//         currency:"INR",
+//         description:"This was spent on bla bla bla",
+//         spentUsing:"Google Pey",
+//         attachment:"https://www.billxyz.com"
+//     },
+// ]
