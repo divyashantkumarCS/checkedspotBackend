@@ -15,7 +15,7 @@ router.get('/getAllProperties', getAllProperties);
 
 router.post('/addProperty', upload.array('file'), addProperty);
 
-router.delete('/deleteProject', deleteProperty);
+router.delete('/deleteProperty', deleteProperty);
 
 router.put('/updateProject', updateproperty);
 

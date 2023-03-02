@@ -1,5 +1,5 @@
 import driver from "../config/neo4jconfig.js ";
-import { int, session } from 'neo4j-driver';
+import { int} from 'neo4j-driver';
 
 
 const getAllProperties = async (req, res) => {
@@ -9,7 +9,7 @@ const getAllProperties = async (req, res) => {
         //Promise API
         const result = await session.executeRead(tx => tx.run(
             `
-                MATCH (p:Person)-[r:RELATED_TO]->(prop:Property)
+                MATCH (p:Person)-[r:CREATED]->(prop:Property)
                 return p, prop, ID(p), ID(prop) 
             `,{}
         ));
@@ -104,11 +104,11 @@ const addProperty= async (req, res) => {
 
     const result = await session.executeWrite(tx => tx.run(
         `
-            MERGE (p:Person {name: $personName})
+            MERGE (p:Person {name : $personName})
             SET p.email = $email, p.mobile = $mobile
-            MERGE (prop:Property {ownershipType: $ownershipType, name: $personName})
-            SET prop.carpetArea = $carpetArea,
-                prop.noOfBedrooms = $noOfBedrooms,
+
+            MERGE (prop:Property {carpetArea : $carpetArea, type : 'plot'})
+            SET prop.noOfBedrooms = $noOfBedrooms,
                 prop.noOfBathroom = $noOfBathroom,
                 prop.noOfKithen = $noOfKithen,
                 prop.otherAminities = $otherAminities,
@@ -119,10 +119,20 @@ const addProperty= async (req, res) => {
                 prop.alevator = $alevator,
                 prop.furnishedStatus = $furnishedStatus,
                 prop.imageData = $imageData,
+                prop.ownership = $ownershipType,
                 prop.personID = ID(p)
-            MERGE (exp:Expenditure {propertyID : ID(prop)})
-            MERGE (oth:Other {propertyID : ID(prop)})
-            MERGE (doc:Document {propertyID : ID(prop)})
+
+            MERGE (exp:Expenditure {propertyID : ID(prop), expenditure : []})
+            SET exp.name = 'Expenditure'
+
+            MERGE (doc:Document {propertyID : ID(prop), document : []})
+            SET doc.name = 'Document'
+
+            MERGE (g:Gallery {propertyID : ID(prop), gallery : []})
+            SET g.name = 'Gallery'
+
+            MERGE (oth:Other {name : 'Other', propertyID : ID(prop)})
+
             MERGE (p)-[cr:CREATED]->(prop)
             SET cr.dateOfCreation = $dateOfCreation
 
@@ -130,10 +140,13 @@ const addProperty= async (req, res) => {
             MERGE (p)-[:HAS_WRITE_ACCESS]->(exp)
             MERGE (p)-[:HAS_WRITE_ACCESS]->(oth)
             MERGE (p)-[:HAS_WRITE_ACCESS]->(doc)
+            MERGE (p)-[:HAS_WRITE_ACCESS]->(g)
 
             MERGE (exp)-[:BELONGS_TO]->(prop)
             MERGE (oth)-[:BELONGS_TO]->(prop)
             MERGE (doc)-[:BELONGS_TO]->(prop)
+            MERGE (g)-[:BELONGS_TO]->(prop)
+
             RETURN p, prop, ID(p), ID(prop)       
         `,{
             personName : obj.name,
@@ -189,8 +202,9 @@ const addProperty= async (req, res) => {
     })
 };
 
+
 const deleteProperty = async (req, res) => {
-    const propID = int(req.body.id);
+    const propertyID = int(req.body.propertyID);
     const session = driver.session();
 
     // const result = await session.executeRead(
@@ -210,17 +224,17 @@ const deleteProperty = async (req, res) => {
         tx => tx.run(
             `
                 MATCH (prop:Property)
-                WHERE ID(prop) = $propID
+                WHERE ID(prop) = $propertyID
                 DETACH DELETE prop
             `,{
-                propID : propID
+                propertyID : propertyID
             }
         )
     )
 
 
     res.status(200).send({
-        "propertyID" : propID,
+        "propertyID" : propertyID,
         "message" : "Node deleted successfully"
     })
 };
@@ -254,6 +268,7 @@ const updateproperty = async (req, res) => {
         "message" : "Node updated successfully"
     })
 };
+
 
 const updateExpenditure = async (req, res) => {
     const propertyID = req?.body?.propertyID;

@@ -1,6 +1,7 @@
 import driver from "../config/neo4jconfig.js";
 import bcrypt from 'bcrypt';
 
+
 const oAuth = async (req, res) => {
 
     const params = {
@@ -151,4 +152,93 @@ const login = async (req,res) => {
     // })
 }
 
-export  {oAuth, register, login};
+
+const provideAccess = async (req, res) => {
+
+    const session = driver.session();
+    let result = null;
+
+    if(req?.body?.accessType?.length === 1){
+        if((req?.body?.accessType[0])?.toLowerCase() === "read"){
+            result = session.executeWrite(
+                tx => tx.run(
+                    `            
+                        MATCH (p:Person)
+                        WHERE ID(p) = $personID
+                        MATCH (prop:Property)
+                        WHERE ID(prop) = $propertyID
+        
+                        MERGE (p)-[:HAS_READ_ACCESS]->(prop)
+                    `,
+                    {
+                        personID : req?.body?.personID,
+                        propertyID : req?.body?.propertyID
+                    }
+                )
+            )
+
+            session.close();
+
+            res.status(200).send({
+                "message" : `User has READ and WRITE access`
+            })
+
+        } else if((req?.body?.accessType[0])?.toLowerCase() === "write"){
+            result = session.executeWrite(
+                tx => tx.run(
+                    `            
+                        MATCH (p:Person)
+                        WHERE ID(p) = $personID
+                        MATCH (prop:Property)
+                        WHERE ID(prop) = $propertyID
+        
+                        MERGE (p)-[:HAS_WRITE_ACCESS]->(prop)
+                    `,
+                    {
+                        personID : req?.body?.personID,
+                        propertyID : req?.body?.propertyID
+                    }
+                )
+            )
+
+            session.close();
+
+            res.status(200).send({
+                "message" : `User has READ and WRITE access`
+            })
+        }
+    }else {
+        result = session.executeWrite(
+            tx => tx.run(
+                `            
+                    MATCH (p:Person)
+                    WHERE ID(p) = $personID
+                    MATCH (prop:Property)
+                    WHERE ID(prop) = $propertyID
+    
+                    MERGE (p)-[:HAS_READ_ACCESS]->(prop)
+                    MERGE (p)-[:HAS_WRITE_ACCESS]->(prop)
+                `,
+                {
+                    personID : req?.body?.personID,
+                    propertyID : req?.body?.propertyID
+                }
+            )
+        )
+
+        session.close();
+
+        res.status(200).send({
+            "message" : `User has READ and WRITE access`
+        })
+    }   
+      
+}
+
+
+export  {
+    oAuth, 
+    register, 
+    login,
+    provideAccess
+};
