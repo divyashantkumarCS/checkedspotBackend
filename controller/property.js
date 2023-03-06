@@ -1,7 +1,7 @@
 import driver from "../config/neo4jconfig.js ";
-import { int} from 'neo4j-driver';
+import neo4j, { int } from 'neo4j-driver';
 
-
+//getting all properties irrespective of anything
 const getAllProperties = async (req, res) => {
     try {
         const session = driver.session();
@@ -9,16 +9,16 @@ const getAllProperties = async (req, res) => {
         //Promise API
         const result = await session.executeRead(tx => tx.run(
             `
-                MATCH (p:Person)-[r:CREATED]->(prop:Property)
-                return p, prop, ID(p), ID(prop) 
+                MATCH (u:User)-[r:CREATED]->(prop:Property)
+                return u, prop, ID(u), ID(prop) 
             `,{}
         ));
 
         //Streaming API
         // session.executeRead(tx => tx.run(
         //     `
-        //         MATCH (p:Person)-[r:RELATED_TO]->(prop:Property)
-        //         return p, prop, ID(p), ID(prop) 
+        //         MATCH (u:User)-[r:RELATED_TO]->(prop:Property)
+        //         return u, prop, ID(u), ID(prop) 
         //     `,{}
         // )).subscribe({
         //     onKeys: keys => {
@@ -40,11 +40,11 @@ const getAllProperties = async (req, res) => {
     
         const data = result?.records?.map(row => {
             return {
-                "propID" : (row.get('ID(prop)')).toNumber(),
-                "pID" : (row.get('ID(p)')).toNumber(),
-                "name" : row.get('p').properties.name,
-                "email" : row.get('p').properties.email,
-                "mobile" : row.get('p').properties.mobile,
+                "propertyID" : (row.get('ID(prop)')).toNumber(),
+                "userID" : (row.get('ID(u)')).toNumber(),
+                "name" : row.get('u').properties.name,
+                "email" : row.get('u').properties.email,
+                "mobile" : row.get('u').properties.mobile,
                 "ownershipType" : row.get('prop').properties.ownershipType,
                 "carpetArea" : row.get('prop').properties.carpetArea,
                 "noOfBedrooms" : row.get('prop').properties.noOfBedrooms,
@@ -76,6 +76,71 @@ const getAllProperties = async (req, res) => {
 };
 
 
+//getting all property from a perticular person unsing the personID
+const getPropertiesFromPerson = async (req, res) => {
+    const userId = int(req?.query?.userId);
+    
+    //pagenation requirements
+    const pageNumber = req?.query?.pageNumber;
+    const limit = req?.query?.limit || 5;
+    const skipItems = ((pageNumber-1)*limit);
+
+    console.log(userId);
+    const session = driver.session();
+
+    const result = await session.executeWrite(
+        tx => tx.run(
+            `
+                MATCH (u:User)-[:CREATED]->(prop:Property)
+                WHERE ID(u) = $userId
+                RETURN prop SKIP $skipItems LIMIT $limit
+            `,
+            {
+                userId : userId,
+                skipItems : skipItems,
+                limit : limit
+            }
+        )
+    )
+
+    const data = result?.records?.map(row => {
+        return row.get('prop')
+    })
+
+    res.status(200).send({
+        "message" : `Retrived all Properties from Person with ID ${userId.toNumber()}`,
+        "data" : data
+    })
+}
+
+
+// getting specific property using propetyID
+const getproperty = async (req, res) => {
+    const propertyId = int(req?.query?.propertyId);
+
+    const session = driver.session();
+
+    const result = await session.executeRead(
+        tx => tx.run(
+            `
+                MATCH (prop:Property)
+                WHERE ID(prop) = $propertyId
+                RETURN prop
+            `,
+            {
+                propertyId : propertyId
+            }
+        )
+    )
+
+    session.close();
+
+    const data = result?.records[0]?.get('prop');
+
+    res.status(200).send(data);
+}
+
+
 const addProperty= async (req, res) => {
     
     const requestData = { "bodyData" : req.body, "fileuploads" : req.files}
@@ -85,6 +150,8 @@ const addProperty= async (req, res) => {
         "name" : requestData.bodyData.fullName || "NOT-AVAILABLE",
         "email" : requestData.bodyData.email || "NOT-AVAILABLE",
         "mobile" : requestData.bodyData.mobile || "NOT-AVAILABLE",
+        "propertyNumber" : requestData.bodyData.propertyNumber || "NOT_AVAILABLE",
+        "type" : requestData.bodyData.type || "NOT_AVAILABLE",
         "ownershipType" : requestData.bodyData.ownership || "NOT-AVAILABLE",
         "carpetArea" : requestData.bodyData.carpetArea || "NOT-AVAILABLE",
         "noOfBedrooms" : requestData.bodyData.noOfBedrooms || "NOT-AVAILABLE",
@@ -104,11 +171,13 @@ const addProperty= async (req, res) => {
 
     const result = await session.executeWrite(tx => tx.run(
         `
-            MERGE (p:Person {name : $personName})
-            SET p.email = $email, p.mobile = $mobile
+            MERGE (u:User {name : $userName})
+            SET u.email = $email, u.mobile = $mobile
 
-            MERGE (prop:Property {carpetArea : $carpetArea, type : 'plot'})
-            SET prop.noOfBedrooms = $noOfBedrooms,
+            MERGE (prop:Property {userId : ID(u), propertyNumber : $propertyNumber})
+            SET prop.type = $type,
+                prop.carpetArea = $carpetArea,
+                prop.noOfBedrooms = $noOfBedrooms,
                 prop.noOfBathroom = $noOfBathroom,
                 prop.noOfKithen = $noOfKithen,
                 prop.otherAminities = $otherAminities,
@@ -119,37 +188,38 @@ const addProperty= async (req, res) => {
                 prop.alevator = $alevator,
                 prop.furnishedStatus = $furnishedStatus,
                 prop.imageData = $imageData,
-                prop.ownership = $ownershipType,
-                prop.personID = ID(p)
-
-            MERGE (exp:Expenditure {propertyID : ID(prop), expenditure : []})
+                prop.ownership = $ownershipType
+                
+            MERGE (exp:Expenditure {propertyId : ID(prop), expenditure : "[]"})
             SET exp.name = 'Expenditure'
 
-            MERGE (doc:Document {propertyID : ID(prop), document : []})
+            MERGE (doc:Document {propertyId : ID(prop), document : "[]"})
             SET doc.name = 'Document'
 
-            MERGE (g:Gallery {propertyID : ID(prop), gallery : []})
+            MERGE (g:Gallery {propertyId : ID(prop), gallery : "[]"})
             SET g.name = 'Gallery'
 
-            MERGE (oth:Other {name : 'Other', propertyID : ID(prop)})
+            MERGE (oth:Other {name : 'Other', propertyId : ID(prop)})
 
-            MERGE (p)-[cr:CREATED]->(prop)
+            MERGE (u)-[cr:CREATED]->(prop)
             SET cr.dateOfCreation = $dateOfCreation
 
-            MERGE (p)-[:HAS_WRITE_ACCESS]->(prop)
-            MERGE (p)-[:HAS_WRITE_ACCESS]->(exp)
-            MERGE (p)-[:HAS_WRITE_ACCESS]->(oth)
-            MERGE (p)-[:HAS_WRITE_ACCESS]->(doc)
-            MERGE (p)-[:HAS_WRITE_ACCESS]->(g)
+            MERGE (u)-[:HAS_WRITE_ACCESS]->(prop)
+            MERGE (u)-[:HAS_WRITE_ACCESS]->(exp)
+            MERGE (u)-[:HAS_WRITE_ACCESS]->(oth)
+            MERGE (u)-[:HAS_WRITE_ACCESS]->(doc)
+            MERGE (u)-[:HAS_WRITE_ACCESS]->(g)
 
             MERGE (exp)-[:BELONGS_TO]->(prop)
             MERGE (oth)-[:BELONGS_TO]->(prop)
             MERGE (doc)-[:BELONGS_TO]->(prop)
             MERGE (g)-[:BELONGS_TO]->(prop)
 
-            RETURN p, prop, ID(p), ID(prop)       
+            RETURN u, prop, ID(u), ID(prop)       
         `,{
-            personName : obj.name,
+            propertyNumber : obj.propertyNumber,
+            type : obj.type,
+            userName : obj.name,
             email : obj.email,
             mobile : obj.mobile,
             ownershipType : obj.ownershipType,
@@ -171,14 +241,15 @@ const addProperty= async (req, res) => {
 
     session.close();
 
-    console.log("ID(PROP)",(result?.records[0].get('ID(prop)')).toNumber())
+    console.log("ID(prop)",(result?.records[0].get('ID(prop)')).toNumber())
 
     const data = result?.records?.map(row => {
         return {
             "propID" : (row.get('ID(prop)')).toNumber(),
-            "name" : row.get('p').properties.name,
-            "email" : row.get('p').properties.email,
-            "mobile" : row.get('p').properties.mobile,
+            "name" : row.get('u').properties.name,
+            "email" : row.get('u').properties.email,
+            "mobile" : row.get('u').properties.mobile,
+            "type" : row.get('prop').properties.type,
             "ownershipType" : row.get('prop').properties.ownershipType,
             "carpetArea" : row.get('prop').properties.carpetArea,
             "noOfBedrooms" : row.get('prop').properties.noOfBedrooms,
@@ -204,18 +275,18 @@ const addProperty= async (req, res) => {
 
 
 const deleteProperty = async (req, res) => {
-    const propertyID = int(req.body.propertyID);
+    const propertyId = int(req.body.propertyId);
     const session = driver.session();
 
     // const result = await session.executeRead(
     //     tx => tx.run(
     //         `
-    //             MATCH (p:Person)-[r:RELATED_TO]->(prop:Property)
-    //             WHERE p.pID = $personID AND prop.propID = $propID
+    //             MATCH (u:User)-[r:RELATED_TO]->(prop:Property)
+    //             WHERE u.userId = $userId AND prop.propertyId = $propertyId
     //             DETACH DELETE prop
     //         `,{
-    //             propID : propID,
-    //             personID : personID
+    //             propertyId : propertyId,
+    //             userId : userId
     //         }
     //     )
     // )
@@ -223,18 +294,22 @@ const deleteProperty = async (req, res) => {
     const result = await session.executeWrite(
         tx => tx.run(
             `
-                MATCH (prop:Property)
-                WHERE ID(prop) = $propertyID
-                DETACH DELETE prop
+                MATCH (prop:Property),
+                      (prop)<-[:BELONGS_TO]-(d:Document {propertyId : $propertyId}), 
+                      (prop)<-[:BELONGS_TO]-(o:Other {propertyId : $propertyId}), 
+                      (prop)<-[:BELONGS_TO]-(g:Gallery {propertyId : $propertyId}), 
+                      (prop)<-[:BELONGS_TO]-(e:Expenditure {propertyId : $propertyId})
+                WHERE ID(prop) = $propertyId
+                DETACH DELETE prop, d, o, g, e
             `,{
-                propertyID : propertyID
+                propertyId : propertyId
             }
         )
     )
 
 
     res.status(200).send({
-        "propertyID" : propertyID,
+        "propertyId" : propertyId,
         "message" : "Node deleted successfully"
     })
 };
@@ -242,8 +317,8 @@ const deleteProperty = async (req, res) => {
 
 const updateproperty = async (req, res) => {
     const params = {
-        personID : int(req?.body?.pID),
-        propID : int(req?.body?.propID),
+        userId : int(req?.body?.userId),
+        propertyId : int(req?.body?.propertyId),
     };
 
     const session = driver.session();
@@ -252,7 +327,7 @@ const updateproperty = async (req, res) => {
         tx => tx.run(
             `
                 MATCH (prop:Property)
-                WHERE ID(prop) = $propID
+                WHERE ID(prop) = $propertyId
                 SET 
                 RETURN prop
             `, params
@@ -271,55 +346,71 @@ const updateproperty = async (req, res) => {
 
 
 const updateExpenditure = async (req, res) => {
-    const propertyID = req?.body?.propertyID;
-    const expenditure = req?.body?.expenditure;
+    const propertyId = int(req.body.propertyId);
+    const expenditure = {
+        "type" : req?.body?.type,
+        "spentOn" : req?.body?.spentOn,
+        "spentBy" : req?.body?.spentBy,
+        "amount" : req?.body?.amount,
+        "currency" : req?.body?.currency,
+        "description" : req?.body?.description,
+        "spentUsing" : req?.body?.spentUsing,
+        "attachment" : req?.body?.attachment
+    }
 
     //Fetch expenditure 
     const session01 = driver.session();
-    const result01 = session01.executeRead(
+    const result01 = await session01.executeRead(
         tx => tx.run(
             `
-                MATCH (ex:Expenditure {propertyID : $propertyID})
+                MATCH (ex:Expenditure {propertyId : $propertyId})
                 RETURN ex
             `,
             {
-                propertyID : req?.body?.propertyID
+                propertyId : propertyId
             }
         )
     )
 
     session01.close();
 
-    const data01 = result01?.records[0].get('ex').properties.expenditures;        
-    data.push(expenditure);
-
+    let data01 = result01?.records[0]?.get('ex').properties.expenditure;
+    
+    data01 = JSON.parse(data01);
+    data01.push(expenditure);
+    const updatedData = JSON.stringify(data01);
 
     /// update with new expenditure data
     const session02 = driver.session();
 
-    const result02 = session.executeWrite(
+    const result02 = await session02.executeWrite(
         tx => tx.run(
             `
-                MATCH (ex:Expenditure {propertyID : $propertyID})
-                SET ex.expenditures = $expenditures
+                MATCH (ex:Expenditure {propertyId : $propertyId})
+                SET ex.expenditure = $expenditure
                 RETURN ex
             `,
             {
-                expenditures : data01
+                propertyId : propertyId,
+                expenditure : updatedData
             }
         )
     )
-    session02.close();
-    const data = result01?.records[0].get('ex').properties.expenditures;
 
+    session02.close();
+    const data = result02?.records[0].get('ex').properties.expenditure;
+    
     res.status(200).send({
         "message" : "Data Updated Seccessfully",
-        "data" : data
+        "data" : JSON.parse(data)
     })
 };
 
+
 export { 
-    getAllProperties, 
+    getAllProperties,
+    getPropertiesFromPerson,
+    getproperty, 
     addProperty, 
     updateproperty, 
     deleteProperty,
@@ -333,6 +424,36 @@ export {
 // }]
 
 // Expenditure = [
+//     {
+//         type : "construction",
+//         spentBy : "kashif",
+//         spentOn : "12/12/2022",
+//         amount:3000,
+//         currency:"INR",
+//         description:"This was spent on bla bla bla",
+//         spentUsing:"Google Pey",
+//         attachment:"https://www.billxyz.com"
+//     },
+//     {
+//         type : "construction",
+//         spentBy : "kashif",
+//         spentOn : "12/12/2022",
+//         amount:3000,
+//         currency:"INR",
+//         description:"This was spent on bla bla bla",
+//         spentUsing:"Google Pey",
+//         attachment:"https://www.billxyz.com"
+//     },
+//     {
+//         type : "construction",
+//         spentBy : "kashif",
+//         spentOn : "12/12/2022",
+//         amount:3000,
+//         currency:"INR",
+//         description:"This was spent on bla bla bla",
+//         spentUsing:"Google Pey",
+//         attachment:"https://www.billxyz.com"
+//     },
 //     {
 //         type : "construction",
 //         spentBy : "kashif",

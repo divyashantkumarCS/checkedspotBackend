@@ -15,7 +15,7 @@ router.post('/register', register);
 
 router.post('/login', login);
 
-router.post('./provideAccess', provideAccess);
+router.post('/provideAccess', provideAccess);
 
 
 export default router;

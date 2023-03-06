@@ -1,5 +1,6 @@
 import driver from "../config/neo4jconfig.js";
 import bcrypt from 'bcrypt';
+import neo4j from "neo4j-driver";
 
 
 const oAuth = async (req, res) => {
@@ -21,19 +22,21 @@ const oAuth = async (req, res) => {
     const result = await session.executeWrite(
         tx => tx.run(
             `
-                MERGE (p:Person {name : $name})
-                SET p.email = $email, p.provider = $provider
-                RETURN p
+                MERGE (u:User {name : $name})
+                SET u.email = $email, u.provider = $provider
+                RETURN u
             `, params
         )
     )
+
+    console.log(result)
     
     const data = result?.records?.map(row => {
-        const keys = Object.keys(row.get('p').properties);
+        const keys = Object.keys(row.get('u').properties);
         const resultObj = {};
 
         keys.forEach(element => {
-            resultObj[element] = row.get('p').properties[element]
+            resultObj[element] = row.get('u').properties[element]
         })
         return resultObj;
     });
@@ -43,6 +46,7 @@ const oAuth = async (req, res) => {
     res.send({
         "status" : 200,
         "data" : data,
+        "result" : result,
         "summary" : result?.summary.counters.updates()
     }) 
 
@@ -53,7 +57,7 @@ const register = async(req, res) => {
     // Before creating a Person node We need to check first the the node is already existing or not
     //Well we will use MERGE clause to avoid duplication of the particular Person Node.
 
-    const personData = req.body;
+    const UserData = req.body;
     const password = req.body.password;
 
     //generate Salt Round for the encryption
@@ -61,7 +65,7 @@ const register = async(req, res) => {
     //creating hashed password
     const hashedPass = await bcrypt.hash(password, salt);
 
-    const person = {
+    const User = {
         "name" : "Divyashant",
         "email" : "dk@gmail.com",
         "password" : hashedPass,
@@ -74,14 +78,14 @@ const register = async(req, res) => {
     const result = await session.executeWrite(
         tx => tx.run(
             `
-                MERGE (p:Person {name : $name})
-                SET p.email = $email, p.password = $password, p.mobile = $mobile
-                RETURN p
+                MERGE (u:User {name : $name})
+                SET u.email = $email, u.password = $password, u.mobile = $mobile
+                RETURN u
             `, {
-                name : person.name,
-                email : person.email,
-                password : person.password,
-                mobile : person.mobile
+                name : User.name,
+                email : User.email,
+                password : User.password,
+                mobile : User.mobile
             }
         )
     );
@@ -89,10 +93,10 @@ const register = async(req, res) => {
     //extracting Data form the result returned by RETURN clause in the Neo4j Query
     const createdData = result.records.map(row => {
         return {
-            "name" : row.get('p').properties.name,
-            "email" : row.get('p').properties.email,
-            "password" : row.get('p').properties.password,
-            "mobile" : row.get('p').properties.mobile
+            "name" : row.get('u').properties.name,
+            "email" : row.get('u').properties.email,
+            "password" : row.get('u').properties.password,
+            "mobile" : row.get('u').properties.mobile
         }
     });
 
@@ -105,8 +109,8 @@ const register = async(req, res) => {
 
 
 const login = async (req,res) => {
-    const email = req.body.email;
-    const password = req.body.password;
+    const email = req?.body?.email;
+    const password = req?.body?.password;
     // const data = {
     //     email : email,
     //     password : password
@@ -119,15 +123,15 @@ const login = async (req,res) => {
     const result = session.executeRead(
         tx=> tx.run (
             `
-                MATCH (p:Person)
-                WHERE p.email = $email
-                return p
+                MATCH (u:User)
+                WHERE u.email = $email
+                RETURN u
             `,{email:email}
         )
     )
 
     const data = result.records.map(row => {
-        return row.get('p').properties
+        return row.get('u').properties
     })
 
     if(data[0].email) {
@@ -155,83 +159,109 @@ const login = async (req,res) => {
 
 const provideAccess = async (req, res) => {
 
+    console.log(req?.body?.accessType[0])
+
+    const userId = neo4j.int(req?.body?.userId)
+    const propertyId = neo4j.int(req?.body?.propertyId)
+    
     const session = driver.session();
-    let result = null;
+    let result;
+
+    // let result = await session.executeWrite(
+    //     tx => tx.run(
+    //         `            
+    //             MATCH (u:User)
+    //             WHERE ID(u) = $userId
+    //             MATCH (prop:Property)
+    //             WHERE ID(prop) = $propertyId
+    //             return u
+    //         `,
+    //         {
+    //             userId :userId,
+    //             propertyId : propertyId
+    //         }
+    //     )
+    // )
+
+    // console.log(result?.records[0].get('u'))
+    // session.close();
+    // res.status(200).send({
+    //     "message" : `User has READ and WRITE access`
+    // })
 
     if(req?.body?.accessType?.length === 1){
-        if((req?.body?.accessType[0])?.toLowerCase() === "read"){
-            result = session.executeWrite(
+        if((req?.body?.accessType[0]).toLowerCase() === "read"){
+            // const session01 = driver.session();
+            result = await session.executeWrite(
                 tx => tx.run(
                     `            
-                        MATCH (p:Person)
-                        WHERE ID(p) = $personID
+                        MATCH (u:User)
+                        WHERE ID(u) = $userId
                         MATCH (prop:Property)
-                        WHERE ID(prop) = $propertyID
+                        WHERE ID(prop) = $propertyId
         
-                        MERGE (p)-[:HAS_READ_ACCESS]->(prop)
+                        MERGE (u)-[:HAS_READ_ACCESS]->(prop)
                     `,
                     {
-                        personID : req?.body?.personID,
-                        propertyID : req?.body?.propertyID
+                        userId : userId,
+                        propertyId : propertyId
                     }
                 )
             )
 
             session.close();
-
+            
             res.status(200).send({
-                "message" : `User has READ and WRITE access`
+                "message" : `User has READ access`
             })
 
-        } else if((req?.body?.accessType[0])?.toLowerCase() === "write"){
-            result = session.executeWrite(
+        } else if((req?.body?.accessType[0]).toLowerCase() === "write"){
+            // const session02 = driver.session();
+            result = await session.executeWrite(
                 tx => tx.run(
                     `            
-                        MATCH (p:Person)
-                        WHERE ID(p) = $personID
+                        MATCH (u:User)
+                        WHERE ID(u) = $userId
                         MATCH (prop:Property)
-                        WHERE ID(prop) = $propertyID
+                        WHERE ID(prop) = $propertyId
         
-                        MERGE (p)-[:HAS_WRITE_ACCESS]->(prop)
+                        MERGE (u)-[:HAS_WRITE_ACCESS]->(prop)
                     `,
                     {
-                        personID : req?.body?.personID,
-                        propertyID : req?.body?.propertyID
+                        userId : userId,
+                        propertyId : propertyId
                     }
                 )
             )
-
-            session.close();
-
+            session.close()
             res.status(200).send({
-                "message" : `User has READ and WRITE access`
+                "message" : `User has WRITE access`
             })
         }
     }else {
-        result = session.executeWrite(
+        // const session03 = driver.session();
+        result = await session.executeWrite(
             tx => tx.run(
                 `            
-                    MATCH (p:Person)
-                    WHERE ID(p) = $personID
+                    MATCH (u:User)
+                    WHERE ID(u) = $userId
                     MATCH (prop:Property)
-                    WHERE ID(prop) = $propertyID
+                    WHERE ID(prop) = $propertyId
     
-                    MERGE (p)-[:HAS_READ_ACCESS]->(prop)
-                    MERGE (p)-[:HAS_WRITE_ACCESS]->(prop)
+                    MERGE (u)-[:HAS_READ_ACCESS]->(prop)
+                    MERGE (u)-[:HAS_WRITE_ACCESS]->(prop)
                 `,
                 {
-                    personID : req?.body?.personID,
-                    propertyID : req?.body?.propertyID
+                    userId : userId,
+                    propertyId : propertyId
                 }
             )
         )
-
         session.close();
-
         res.status(200).send({
             "message" : `User has READ and WRITE access`
         })
-    }   
+    }  
       
 }
 
