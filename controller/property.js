@@ -1,5 +1,5 @@
 import driver from "../config/neo4jconfig.js ";
-import neo4j, { int } from 'neo4j-driver';
+import neo4j, { int, Date } from 'neo4j-driver';
 
 //getting all properties irrespective of anything
 const getAllProperties = async (req, res) => {
@@ -140,167 +140,203 @@ const getproperty = async (req, res) => {
     res.status(200).send(data);
 }
 
-
-const addProperty= async (req, res) => {
-    
-    const requestData = { "bodyData" : req.body, "fileuploads" : req.files}
-    // console.log(requestData);
-
-    const obj = {
-        "name" : requestData.bodyData.fullName || "NOT-AVAILABLE",
-        "email" : requestData.bodyData.email || "NOT-AVAILABLE",
-        "mobile" : requestData.bodyData.mobile || "NOT-AVAILABLE",
-        "propertyNumber" : requestData.bodyData.propertyNumber || "NOT_AVAILABLE",
-        "type" : requestData.bodyData.type || "NOT_AVAILABLE",
-        "ownershipType" : requestData.bodyData.ownership || "NOT-AVAILABLE",
-        "carpetArea" : requestData.bodyData.carpetArea || "NOT-AVAILABLE",
-        "noOfBedrooms" : requestData.bodyData.noOfBedrooms || "NOT-AVAILABLE",
-        "noOfBathroom" : requestData.bodyData.noOfBathroom || "NOT-AVAILABLE",
-        "noOfKithen" : requestData.bodyData.noOfKithen || "NOT-AVAILABLE",
-        "otherAminities" : requestData.bodyData.otherAminities || "NOT-AVAILABLE",
-        "lobby" : requestData.bodyData.lobby || "NOT-AVAILABLE",
-        "dinningArea" : requestData.bodyData.dinningArea || "NOT-AVAILABLE",
-        "garden" : requestData.bodyData.garden || "NOT-AVAILABLE",
-        "parkingLot" : requestData.bodyData.parkingLot || "NOT-AVAILABLE",
-        "alevator" : requestData.bodyData.alevator || "NOT-AVAILABLE",
-        "furnishedStatus" : requestData.bodyData.furnishedStatus || "NOT-AVAILABLE",
-        "imageData" : requestData.bodyData.imageData || [],
-    }
-
+const createProperty= async (req, res) => {
+    console.log(req.body)
     const session = driver.session();
-
-    const result = await session.executeWrite(tx => tx.run(
-        `
-            MERGE (u:User {name : $userName})
-            SET u.email = $email, u.mobile = $mobile
-
-            MERGE (prop:Property {userId : ID(u), propertyNumber : $propertyNumber})
-            SET prop.type = $type,
-                prop.carpetArea = $carpetArea,
-                prop.noOfBedrooms = $noOfBedrooms,
-                prop.noOfBathroom = $noOfBathroom,
-                prop.noOfKithen = $noOfKithen,
-                prop.otherAminities = $otherAminities,
-                prop.lobby = $lobby,
-                prop.dinningArea = $dinningArea,
-                prop.garden = $garden,
-                prop.parkingLot = $parkingLot, 
-                prop.alevator = $alevator,
-                prop.furnishedStatus = $furnishedStatus,
-                prop.imageData = $imageData,
-                prop.ownership = $ownershipType
-                
-            MERGE (exp:Expenditure {propertyId : ID(prop), expenditure : "[]"})
-            SET exp.name = 'Expenditure'
-
-            MERGE (doc:Document {propertyId : ID(prop), document : "[]"})
-            SET doc.name = 'Document'
-
-            MERGE (g:Gallery {propertyId : ID(prop), gallery : "[]"})
-            SET g.name = 'Gallery'
-
-            MERGE (oth:Other {name : 'Other', propertyId : ID(prop)})
-
-            MERGE (u)-[cr:CREATED]->(prop)
-            SET cr.dateOfCreation = $dateOfCreation
-
-            MERGE (u)-[:HAS_WRITE_ACCESS]->(prop)
-            MERGE (u)-[:HAS_WRITE_ACCESS]->(exp)
-            MERGE (u)-[:HAS_WRITE_ACCESS]->(oth)
-            MERGE (u)-[:HAS_WRITE_ACCESS]->(doc)
-            MERGE (u)-[:HAS_WRITE_ACCESS]->(g)
-
-            MERGE (exp)-[:BELONGS_TO]->(prop)
-            MERGE (oth)-[:BELONGS_TO]->(prop)
-            MERGE (doc)-[:BELONGS_TO]->(prop)
-            MERGE (g)-[:BELONGS_TO]->(prop)
-
-            RETURN u, prop, ID(u), ID(prop)       
-        `,{
-            propertyNumber : obj.propertyNumber,
-            type : obj.type,
-            userName : obj.name,
-            email : obj.email,
-            mobile : obj.mobile,
-            ownershipType : obj.ownershipType,
-            carpetArea : obj.carpetArea,
-            noOfBedrooms : obj.noOfBedrooms,
-            noOfBathroom : obj.noOfBathroom,
-            noOfKithen : obj.noOfKithen,
-            otherAminities : obj.otherAminities,
-            lobby : obj.lobby,
-            dinningArea : obj.dinningArea,
-            garden : obj.garden,
-            parkingLot : obj.parkingLot,
-            alevator : obj.alevator,
-            furnishedStatus : obj.furnishedStatus,
-            imageData : obj.imageData,
-            dateOfCreation : (new Date()).toDateString()
-        }
-    ))
-
-    session.close();
-
-    console.log("ID(prop)",(result?.records[0].get('ID(prop)')).toNumber())
-
-    const data = result?.records?.map(row => {
-        return {
-            "propID" : (row.get('ID(prop)')).toNumber(),
-            "name" : row.get('u').properties.name,
-            "email" : row.get('u').properties.email,
-            "mobile" : row.get('u').properties.mobile,
-            "type" : row.get('prop').properties.type,
-            "ownershipType" : row.get('prop').properties.ownershipType,
-            "carpetArea" : row.get('prop').properties.carpetArea,
-            "noOfBedrooms" : row.get('prop').properties.noOfBedrooms,
-            "noOfBathroom" : row.get('prop').properties.noOfBathroom,
-            "noOfKithen" : row.get('prop').properties.noOfKithen,
-            "otherAminities" : row.get('prop').properties.otherAminities,
-            "lobby" : row.get('prop').properties.lobby,
-            "dinningArea" : row.get('prop').properties.dinningArea,
-            "garden" : row.get('prop').properties.garden,
-            "parkingLot" : row.get('prop').properties.parkingLot,
-            "alevator" : row.get('prop').properties.alevator,
-            "furnishedStatus" : row.get('prop').properties.furnishedStatus,
-            "imageData" : row.get('prop').properties.imageData
-        }
-    })
-
-    res.send({
-        "status": 200,
-        "message": "Property added Successfully",
-        "data" : data
-    })
-};
-
-
-const deleteProperty = async (req, res) => {
-    const propertyId = int(req.body.propertyId);
-    const session = driver.session();
-
-    // const result = await session.executeRead(
-    //     tx => tx.run(
-    //         `
-    //             MATCH (u:User)-[r:RELATED_TO]->(prop:Property)
-    //             WHERE u.userId = $userId AND prop.propertyId = $propertyId
-    //             DETACH DELETE prop
-    //         `,{
-    //             propertyId : propertyId,
-    //             userId : userId
-    //         }
-    //     )
-    // )
 
     const result = await session.executeWrite(
         tx => tx.run(
             `
-                MATCH (prop:Property),
-                      (prop)<-[:BELONGS_TO]-(d:Document {propertyId : $propertyId}), 
-                      (prop)<-[:BELONGS_TO]-(o:Other {propertyId : $propertyId}), 
-                      (prop)<-[:BELONGS_TO]-(g:Gallery {propertyId : $propertyId}), 
-                      (prop)<-[:BELONGS_TO]-(e:Expenditure {propertyId : $propertyId})
+                MATCH (u:User {email : $email}), (p:Project) WHERE ID(p) = $projectId
+                WITH p, u
+                MERGE (prop:Property {projectId : $projectId, propertyNumber : $propertyNumber})
+                SET prop.type = $type,
+                    prop.carpetArea = $carpetArea,
+                    prop.noOfBedroom = $noOfBedroom,
+                    prop.noOfBathroom = $noOfBathroom,
+                    prop.noOfKitchen = $noOfKitchen,
+                    prop.otherAminities = $otherAminities,
+                    prop.lobby = $lobby,
+                    prop.dinningArea = $dinningArea,
+                    prop.garden = $garden,
+                    prop.parkingLot = $parkingLot, 
+                    prop.alevator = $alevator,
+                    prop.furnishedStatus = $furnishedStatus
+
+                MERGE (prop)-[:BELONGS_TO]->(p)
+                MERGE (u)-[:HAS_WRITE_ACCESS]->(prop)
+
+                RETURN prop       
+            `,{
+                projectId : int(req?.body?.projectId),
+                propertyNumber : int(req?.body?.propertyNumber),
+                email : req?.body?.email,
+                type : req?.body?.type || "NOT_AVAILABLE",
+                carpetArea : int(req?.body?.carpetArea ? req?.body?.carpetArea : 0),
+                noOfBedroom : int(req?.body?.noOfBedroom ? req?.body?.noOfBedroom : 0),
+                noOfBathroom : int(req?.body?.noOfBathroom ? req?.body?.noOfBathroom : 0),
+                noOfKitchen : int(req?.body?.noOfKitchen ? req?.body?.noOfKitchen : 0),
+                otherAminities : req?.body?.otherAminities || "NOT_AVAILABLE",
+                lobby : req?.body?.lobby || "NOT_AVAILABLE",
+                dinningArea : req?.body?.dinningArea || "NOT_AVAILABLE",
+                garden : req?.body?.garden || "NOT_AVAILABLE",
+                parkingLot : req?.body?.parkingLot || "NOT_AVAILABLE",
+                alevator : req?.body?.alevator || "NOT_AVAILABLE",
+                furnishedStatus : req?.body?.furnishedStatus || "NOT_AVAILABLE"
+            }
+        )
+    )
+
+    session.close();
+
+    const data = result?.records[0]?.get('prop').properties
+    console.log(data)
+
+    res.status(200).send(data);
+};
+// const addProperty= async (req, res) => {
+    
+//     const requestData = { "bodyData" : req.body, "fileuploads" : req.files}
+//     // console.log(requestData);
+
+//     const req?.body? = {
+//         "name" : requestData.bodyData.fullName || "NOT-AVAILABLE",
+//         "email" : requestData.bodyData.email || "NOT-AVAILABLE",
+//         "mobile" : requestData.bodyData.mobile || "NOT-AVAILABLE",
+//         "propertyNumber" : requestData.bodyData.propertyNumber || "NOT_AVAILABLE",
+//         "type" : requestData.bodyData.type || "NOT_AVAILABLE",
+//         "ownershipType" : requestData.bodyData.ownership || "NOT-AVAILABLE",
+//         "carpetArea" : requestData.bodyData.carpetArea || "NOT-AVAILABLE",
+//         "noOfBedrooms" : requestData.bodyData.noOfBedrooms || "NOT-AVAILABLE",
+//         "noOfBathroom" : requestData.bodyData.noOfBathroom || "NOT-AVAILABLE",
+//         "noOfKithen" : requestData.bodyData.noOfKithen || "NOT-AVAILABLE",
+//         "otherAminities" : requestData.bodyData.otherAminities || "NOT-AVAILABLE",
+//         "lobby" : requestData.bodyData.lobby || "NOT-AVAILABLE",
+//         "dinningArea" : requestData.bodyData.dinningArea || "NOT-AVAILABLE",
+//         "garden" : requestData.bodyData.garden || "NOT-AVAILABLE",
+//         "parkingLot" : requestData.bodyData.parkingLot || "NOT-AVAILABLE",
+//         "alevator" : requestData.bodyData.alevator || "NOT-AVAILABLE",
+//         "furnishedStatus" : requestData.bodyData.furnishedStatus || "NOT-AVAILABLE",
+//         "imageData" : requestData.bodyData.imageData || [],
+//     }
+
+//     const session = driver.session();
+
+//     const result = await session.executeWrite(tx => tx.run(
+//         `
+//             MERGE (u:User {name : $userName})
+//             SET u.email = $email, u.mobile = $mobile
+
+//             MERGE (prop:Property {userId : ID(u), propertyNumber : $propertyNumber})
+//             SET prop.type = $type,
+//                 prop.carpetArea = $carpetArea,
+//                 prop.noOfBedrooms = $noOfBedrooms,
+//                 prop.noOfBathroom = $noOfBathroom,
+//                 prop.noOfKithen = $noOfKithen,
+//                 prop.otherAminities = $otherAminities,
+//                 prop.lobby = $lobby,
+//                 prop.dinningArea = $dinningArea,
+//                 prop.garden = $garden,
+//                 prop.parkingLot = $parkingLot, 
+//                 prop.alevator = $alevator,
+//                 prop.furnishedStatus = $furnishedStatus,
+//                 prop.imageData = $imageData,
+//                 prop.ownership = $ownershipType
+                
+//             MERGE (exp:Expenditure {propertyId : ID(prop), expenditure : "[]"})
+//             SET exp.name = 'Expenditure'
+
+//             MERGE (doc:Document {propertyId : ID(prop), document : "[]"})
+//             SET doc.name = 'Document'
+
+//             MERGE (g:Gallery {propertyId : ID(prop), gallery : "[]"})
+//             SET g.name = 'Gallery'
+
+//             MERGE (oth:Other {name : 'Other', propertyId : ID(prop)})
+
+//             MERGE (u)-[cr:CREATED]->(prop)
+//             SET cr.dateOfCreation = $dateOfCreation
+
+//             MERGE (u)-[:HAS_WRITE_ACCESS]->(prop)
+//             MERGE (u)-[:HAS_WRITE_ACCESS]->(exp)
+//             MERGE (u)-[:HAS_WRITE_ACCESS]->(oth)
+//             MERGE (u)-[:HAS_WRITE_ACCESS]->(doc)
+//             MERGE (u)-[:HAS_WRITE_ACCESS]->(g)
+
+//             MERGE (exp)-[:BELONGS_TO]->(prop)
+//             MERGE (oth)-[:BELONGS_TO]->(prop)
+//             MERGE (doc)-[:BELONGS_TO]->(prop)
+//             MERGE (g)-[:BELONGS_TO]->(prop)
+
+//             RETURN u, prop, ID(u), ID(prop)       
+//         `,{
+//             propertyNumber : req?.body?.propertyNumber,
+//             type : req?.body?.type,
+//             userName : req?.body?.name,
+//             email : req?.body?.email,
+//             mobile : req?.body?.mobile,
+//             ownershipType : req?.body?.ownershipType,
+//             carpetArea : req?.body?.carpetArea,
+//             noOfBedrooms : req?.body?.noOfBedrooms,
+//             noOfBathroom : req?.body?.noOfBathroom,
+//             noOfKithen : req?.body?.noOfKithen,
+//             otherAminities : req?.body?.otherAminities,
+//             lobby : req?.body?.lobby,
+//             dinningArea : req?.body?.dinningArea,
+//             garden : req?.body?.garden,
+//             parkingLot : req?.body?.parkingLot,
+//             alevator : req?.body?.alevator,
+//             furnishedStatus : req?.body?.furnishedStatus,
+//             imageData : req?.body?.imageData,
+//             dateOfCreation : (new Date()).toDateString()
+//         }
+//     ))
+
+//     session.close();
+
+//     console.log("ID(prop)",(result?.records[0].get('ID(prop)')).toNumber())
+
+//     const data = result?.records?.map(row => {
+//         return {
+//             "propID" : (row.get('ID(prop)')).toNumber(),
+//             "name" : row.get('u').properties.name,
+//             "email" : row.get('u').properties.email,
+//             "mobile" : row.get('u').properties.mobile,
+//             "type" : row.get('prop').properties.type,
+//             "ownershipType" : row.get('prop').properties.ownershipType,
+//             "carpetArea" : row.get('prop').properties.carpetArea,
+//             "noOfBedrooms" : row.get('prop').properties.noOfBedrooms,
+//             "noOfBathroom" : row.get('prop').properties.noOfBathroom,
+//             "noOfKithen" : row.get('prop').properties.noOfKithen,
+//             "otherAminities" : row.get('prop').properties.otherAminities,
+//             "lobby" : row.get('prop').properties.lobby,
+//             "dinningArea" : row.get('prop').properties.dinningArea,
+//             "garden" : row.get('prop').properties.garden,
+//             "parkingLot" : row.get('prop').properties.parkingLot,
+//             "alevator" : row.get('prop').properties.alevator,
+//             "furnishedStatus" : row.get('prop').properties.furnishedStatus,
+//             "imageData" : row.get('prop').properties.imageData
+//         }
+//     })
+
+//     res.send({
+//         "status": 200,
+//         "message": "Property added Successfully",
+//         "data" : data
+//     })
+// };
+
+
+const deleteProperty = async (req, res) => {
+    const propertyId = int(req?.query?.propertyId);
+    const session = driver.session();
+    
+    const result = await session.executeWrite(
+        tx => tx.run(
+            `
+                MATCH (prop:Property)
                 WHERE ID(prop) = $propertyId
-                DETACH DELETE prop, d, o, g, e
+                DETACH DELETE prop
             `,{
                 propertyId : propertyId
             }
@@ -411,7 +447,7 @@ export {
     getAllProperties,
     getPropertiesFromPerson,
     getproperty, 
-    addProperty, 
+    createProperty, 
     updateproperty, 
     deleteProperty,
     updateExpenditure 

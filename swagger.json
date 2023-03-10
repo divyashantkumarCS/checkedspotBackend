@@ -1,0 +1,905 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "checkedspot",
+        "description": "",
+        "version": "1.0.0"
+    },
+
+    "servers": [
+        {
+            "url": "http://localhost:9191",
+            "description": "Optional server description, e.g. Main (production) server"
+        },
+        {
+            "url": "{protocol}://api.example.com/v1",
+            "variables": {
+                "protocol": {
+                    "enum": [
+                        "http",
+                        "https"
+                    ],
+                    "default": "https"
+                }
+            },
+            "description": "Optional server description, e.g. Main (production) server"
+        },
+        {
+            "url": "{protocol}://staging-api.example.com",
+            "variables": {
+                "protocol": {
+                    "enum": [
+                        "http",
+                        "https"
+                    ],
+                    "default": "https"
+                }
+            },
+            "description": "Optional server description, e.g. staging server for testing"
+        }
+    ],
+
+    "tags": [
+        {
+            "name": "admins",
+            "description": "Secured Admin-only calls"
+        },
+        {
+            "name": "developers",
+            "description": "Operations available to regular developers"
+        },
+        {
+            "name": "users",
+            "description": "Operations available to regular Users"
+        },
+        {
+            "name": "projects",
+            "description": "Operations available to regular Projects"
+        },
+        {
+            "name": "properties",
+            "description": "Operations available to regular Properties"
+        },
+        {
+            "name" : "functionTest",
+            "description" : "These Operations(HTTP methods) are not tested yet"
+        }
+    ],
+
+    "paths": {
+        "/project": {
+            "get" : {
+                "tags" : [
+                    "projects"
+                ],
+                "summary" : "Get Paticular Project using projectId",
+                "description" : "Pass <b>projectId</b> in <b>query</b> params to get perticular Project details",
+                "operationId" : "getProject",
+                "parameters" : [
+                    {
+                        "name" : "projectId",
+                        "in" : "query",
+                        "required" : true,
+                        "description" : "Get Project using projectId",
+                        "schema" : {
+                            "type" : "integer",
+                            "format" : "int32",
+                            "minimum" : 0
+                        }
+                    }
+                ],
+
+                "responses" : {
+                    "200" :  {
+                        "description" : "As a response, this endpoint will return details for the particular projectId",
+                        "content" : {
+                            "application/json" : {
+                                "type" : "object",
+                                "description" : "This Object contains details related to the Project"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    },
+                    "404": {
+                        "description": "projectId not Found"
+                    },
+                    "default": {
+                        "description": "Unexpected error"
+                    }
+                }
+            },
+
+            "post": {
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Creates Project for the particular User",
+                "description": "To create the project, pass <b>projectName</b> and <b>email</b> in body",
+                "operationId": "createProject",
+                "requestBody": {
+                    "content": {
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string"
+                                    },
+                                    "projectName": {
+                                        "description": "name of the project like, Palm Paradise, Green Apartment, etc.",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "email",
+                                    "projectName"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Array of Objets of Projects",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "This Object contains all the related data to the Project"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    },
+                    "404": {
+                        "description": "Data not Found"
+                    },
+                    "default": {
+                        "description": "Unexpected error"
+                    }
+                }
+            },
+
+            "delete" : {
+                "tags" : [
+                    "projects"
+                ],
+                "summary" : "Delete Project using projectId",
+                "description" : "Pass <b>projectId</b> in <b>query</b> params to delete the Project and all other nodes related to the Project with <b>Relationship Type <i>BELONGS_TO</i></b>",
+                "operationId" : "deleteProject",
+                "parameters" : [
+                    {
+                        "name" : "projectId",
+                        "in" : "query",
+                        "required" : true,
+                        "description" : "Delete Project using projectId",
+                        "schema" : {
+                            "type" : "integer",
+                            "format" : "int32",
+                            "minimum" : 0
+                        }
+                    }
+                ],
+
+                "responses" : {
+                    "200" : {
+                        "description" : "Delete the Project and all other nodes related to the Project with <b>Relationship Type <i>BELONGS_TO</i></b>",
+                        "content" : {
+                            "application/json" : {
+                                "schema" : {
+                                    "type" : "string",
+                                    "description" : "Returns A message confirms Project is deleted"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    },
+                    "404": {
+                        "description": "projectId not Found"
+                    },
+                    "default": {
+                        "description": "Unexpected error"
+                    }
+                }
+                
+            }
+        },
+
+        "/project/{userId}": {
+            "get": {
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Return All projects for particular userId",
+                "description": "This method returns all the projects CREATED_BY the User using userId",
+                "operationId": "getProjectsByuserId",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "required": true,
+                        "description": "Use login email as the USERID",
+                        "schema": {
+                            "type": "string",
+                            "description": "Use login email as the USERID"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of Objets of Projects",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "description": "This Object contains all the related data to the Project"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid User ID"
+                    },
+                    "404": {
+                        "description": "User ID not Found"
+                    },
+                    "default": {
+                        "description": "Unexpected error"
+                    }
+                }
+            },
+            "post": {}
+        },
+
+        "/project/property/{projectId}": {
+            "get": {
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Return all the Properties for the particular Project ID",
+                "description": "Return all the Properties for the particular Project ID",
+                "operationId": "getPropertiesByprojectId",
+                "parameters": [
+                    {
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true,
+                        "description": "Optional server description, e.g. Main (production) server",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "minimum": 0
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "As a response, Array of Objects is expected, where each Object contains the details of the property",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "projectId": {
+                                                "type": "integer",
+                                                "description": "ID of the project to which the property belongs"
+                                            },
+                                            "propertyType": {
+                                                "type": "string",
+                                                "description": "Type of property, like plot, flat, villa, etc."
+                                            },
+                                            "carpetArea": {
+                                                "type": "integer",
+                                                "description": "Carpet Area of the property"
+                                            },
+                                            "noOfBedroom": {
+                                                "type": "integer",
+                                                "description": "Number of Bedrooms the property has"
+                                            },
+                                            "noOfBathroom": {
+                                                "type": "integer",
+                                                "description": "Number of Bathroom the property has"
+                                            },
+                                            "noOfKitchen": {
+                                                "type": "integer",
+                                                "description": "Number of Kitchen the property has"
+                                            },
+                                            "lobby": {
+                                                "type": "string",
+                                                "description": "Availability of the Lobby"
+                                            },
+                                            "dinningArea": {
+                                                "type": "string",
+                                                "description": "Availability of the Lobby"
+                                            },
+                                            "garden": {
+                                                "type": "string",
+                                                "description": "Availability of the garden"
+                                            },
+                                            "parkingLot": {
+                                                "type": "string",
+                                                "description": "Availability of the parkingLot"
+                                            },
+                                            "alevator": {
+                                                "type": "string",
+                                                "description": "Availability of the alevator"
+                                            },
+                                            "otherAminities": {
+                                                "type": "string",
+                                                "description": "Description for the avalability of other Aminities property has to offer"
+                                            },
+                                            "furnishedStatus": {
+                                                "type": "string",
+                                                "description": "provides the furnished status of the property"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid User ID"
+                    },
+                    "404": {
+                        "description": "User ID not Found"
+                    },
+                    "default": {
+                        "description": "Unexpected error"
+                    }
+                }
+            },
+
+            "put": {
+
+            },
+
+            "delete": {
+
+            }
+        },
+
+        "/project/expenditure": {
+            "get": {
+                "tags": [
+                    "functionTest"
+                ],
+                "summary": "Returns Expenditure data(Array of Objects) for a particular Project",
+                "description": "To Return Expenditure Data(Array of Objects), this endpoint Accepts <b>projectId</b> in <b>query</b> params",
+                "operationId": "getExpenditure",
+                "parameters": [
+                    {
+                        "name": "projectId",
+                        "in": "query",
+                        "required": true,
+                        "description": "Takes <b>projectId</b> in query params to return Expenditure Data(Array of Objects)",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "minimum": 0
+                        }
+                    }
+                ],
+
+                "responses" : {
+                    "200" :  {
+                        "description" : "Array of Objects will be return to the user of this endpoint",
+                        "content" : {
+                            "application/json" : {
+                                "type" : "array",
+                                "items": {
+                                    "type": "object",
+                                    "description": "individual expenses"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    },
+                    "404": {
+                        "description": "projectId not Found"
+                    },
+                    "default": {
+                        "description": "Unexpected error"
+                    }
+                }
+            },
+
+            "post": {
+
+            },
+
+            "put": {
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Returns Updated Expenditure Node belongs to the particular project",
+                "description": "Takes an Object contains data for new expenditure which contains <b>projectId</b> and other expenditure data in <b>Body</b> and Updates the expenditures property of the Expenditure Node with the new expenditure object",
+                "operationId": "updateExpenditure",
+                "requestBody" : {
+                    "content" : {
+                        "application/x-www-form-urlencoded" : {
+                            "schema" : {
+                                "type": "object",
+                                "properties" : {
+                                    "projectId" : {
+                                        "type" : "integer",
+                                        "format" : "int32",
+                                        "minimum" : 0,
+                                        "description": "projectId"
+                                    },
+                                    "type" : {
+                                        "type" : "string",
+                                        "description" : "pass type of expenditure, Example: construction, garden maintanance, labour charge etc."
+                                    },
+                                    "spentOn" : {
+                                        "type" : "string",
+                                        "format" : "date-time",
+                                        "description" : "pass the stringified date-time(2017-07-21T17:32:28Z) on which the transaction was done"
+                                    },
+                                    "spentBy" : {
+                                        "type" : "string",
+                                        "description" : "pass the name of the person who had spend"
+                                    },
+                                    "currency" : {
+                                        "type" : "string",
+                                        "description" : "pass currency"
+                                    },
+                                    "amount" : {
+                                        "type" : "number",
+                                        "format" : "float",
+                                        "minimum" : 0,
+                                        "description": "pass the spend amount corresponding to currency"
+                                    },
+                                    "description" : {
+                                        "type" : "string",
+                                        "description" : "pass expenditure's description"
+                                    },
+                                    "spentUsing" : {
+                                        "type" : "string",
+                                        "description" : "pass the method of payment like, GPay, PhonePay, Net Banking, NEFT, etc.."
+                                    },
+                                    "attachment" : {
+                                        "type" : "string",
+                                        "format" : "url",
+                                        "description" : "pass the url of the payment receipt"
+                                    }
+                                },
+                                "required" :["projectId", "spentOn"]
+                            }
+                        }
+                    }
+                },
+
+                "responses" : {
+                    "200" :  {
+                        "description" : "As a response, this endpoint update <b>Expenditure Node's</b> expenditures property and return an Array of Object having the individual expenditure data in each object",
+                        "content" : {
+                            "application/json" : {
+                                "type" : "array",
+                                "items" : {
+                                    "type" : "object",
+                                    "description" : "This Object contains details individual expenses details"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    },
+                    "404": {
+                        "description": "projectId not Found"
+                    },
+                    "default": {
+                        "description": "Unexpected error"
+                    }
+                }
+            },
+
+            "delete": {
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Returns confirmation message for the deletion of the <b>Expenditure Node</b>",
+                "description": "To delete <b>Expenditure Node</b>, this endpoint Accepts <b>projectId</b> in <b>query</b> params",
+                "operationId": "deleteExpenditure",
+                "parameters": [
+                    {
+                        "name": "projectId",
+                        "in": "query",
+                        "required": true,
+                        "description": "Takes <b>projectId</b> in query params to delete the Expenditure Node",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "minimum": 0
+                        }
+                    }
+                ],
+
+                "responses" : {
+                    "200" :  {
+                        "description" : "As a response, this endpoint return confirmation message for the deletion of the Expenditure Node for the particular projectId",
+                        "content" : {
+                            "application/json" : {
+                                "type" : "string",
+                                "description" : "Message for the confirmation of the deletion of Node"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    },
+                    "404": {
+                        "description": "projectId not Found"
+                    },
+                    "default": {
+                        "description": "Unexpected error"
+                    }
+                }
+            }
+        },
+
+        "/project/document": {
+            "get": {
+                "tags": [
+                    "functionTest"
+                ],
+                "summary": "Returns Document data(Array of Objects) for a particular Project",
+                "description": "To Return Document Data(Array of Objects), this endpoint Accepts <b>projectId</b> in <b>query</b> params",
+                "operationId": "getDocument",
+                "parameters": [
+                    {
+                        "name": "projectId",
+                        "in": "query",
+                        "required": true,
+                        "description": "Takes <b>projectId</b> in query params to return Document Data(Array of Objects)",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "minimum": 0
+                        }
+                    }
+                ],
+
+                "responses" : {
+                    "200" :  {
+                        "description" : "Document Data(Array of Objects) will be return to the user of this endpoint",
+                        "content" : {
+                            "application/json" : {
+                                "type" : "array",
+                                "items": {
+                                    "type": "object",
+                                    "description": "individual Document details"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    },
+                    "404": {
+                        "description": "projectId not Found"
+                    },
+                    "default": {
+                        "description": "Unexpected error"
+                    }
+                }                
+            },
+
+            "post": {
+
+            },
+
+            "put": {
+
+            },
+
+            "delete": {
+                "tags": [
+                    "functionTest"
+                ],
+                "summary": "Returns confirmation message for the deletion of the <b>Document Node",
+                "description": "To delete <b>Document Node</b>, this endpoint Accepts <b>projectId</b> in <b>query</b> params.",
+                "operationId": "deleteDocument",
+                "parameters": [
+                    {
+                        "name": "projectId",
+                        "in": "query",
+                        "required": true,
+                        "description": "Takes <b>projectId</b> in query params to delete the Document Node",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "minimum": 0
+                        }
+                    }
+                ],
+
+                "responses" : {
+                    "200" :  {
+                        "description" : "As a response, this endpoint return confirmation message for the deletion of the Document Node for the particular projectId",
+                        "content" : {
+                            "application/json" : {
+                                "type" : "string",
+                                "description" : "Message for the confirmation of the deletion of Node"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    },
+                    "404": {
+                        "description": "projectId not Found"
+                    },
+                    "default": {
+                        "description": "Unexpected error"
+                    }
+                }
+            }
+        },
+
+        "/property" : {
+            "get" : {
+                "tags" : [
+                    "properties"
+                ],
+                "summary" : "Get property by propertyId",
+                "description" : "This endpoint takes <b>propertyId</b> in <b>query</b> params and produces response which will be an Object contains related data to the property",
+                "operationId" : "getProperty",
+                "parameters" : [
+                    {
+                        "name" : "propertyId",
+                        "in" : "query",
+                        "required" : true,
+                        "schema" : {
+                            "type" : "integer",
+                            "format" : "int32",
+                            "minimum" : 0
+                        }
+                    }
+                ],
+                "responses" : {
+                    "200" : {
+                        "content" : {
+                            "application/json" : {
+                                "schema" : {
+                                    "type" : "object",
+                                    "description" : "Property Details"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid User ID"
+                    },
+                    "404": {
+                        "description": "User ID not Found"
+                    },
+                    "default": {
+                        "description": "Unexpected error"
+                    }                    
+                }
+            },
+
+            "post" : {
+                "tags" : [
+                    "properties"
+                ],
+                "summary": "Creates Property for the particular Project",
+                "description": "To create the Preperty, pass <b>projectId</b> and <b>propertyNumber</b> and other property details in body",
+                "operationId": "createProperty",
+                "requestBody": {
+                    "content": {
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "projectId": {
+                                        "type": "integer",                                        
+                                        "format" : "int32",
+                                        "description": "<b>projectId</b> is important property for the data retrieval purpose"                                       
+                                    },
+                                    "propertyNumber": {
+                                        "type": "integer",                                        
+                                        "format" : "int32",
+                                        "description": "<b>propertyNumber</b> is used as unique property for the Node which is important to create property node"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "description": "<b>user Email</b> is used establish relationship between user Node and Property Node"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "default" : "NOT_AVAILABLE",
+                                        "description": "Type of property, like plot, flat, villa, etc."
+                                    },
+                                    "carpetArea": {
+                                        "type": "number",
+                                        "format" : "float",
+                                        "default" : 0,
+                                        "description": "Carpet Area of the property"
+                                    },
+                                    "noOfBedroom": {
+                                        "type": "integer",                                        
+                                        "format" : "int32",
+                                        "enum" : [1,2,3,4,5,6,7,8,10],
+                                        "default" : 1,
+                                        "description": "Number of Bedrooms the property has"
+                                    },
+                                    "noOfBathroom": {
+                                        "type": "integer",                                        
+                                        "format" : "int32",
+                                        "enum" : [1,2,3,4,5,6,7,8,10],
+                                        "default" : 1,
+                                        "description": "Number of Bathroom the property has"
+                                    },
+                                    "noOfKitchen": {
+                                        "type": "integer",                                        
+                                        "format" : "int32",
+                                        "enum" : [1,2,3,4,5],
+                                        "default" : 1,
+                                        "description": "Number of Kitchen the property has"
+                                    },
+                                    "lobby": {
+                                        "type": "string",
+                                        "enum" :[
+                                            "available",
+                                            "NOT_AVAILABLE"
+                                        ],
+                                        "default" : "NOT_AVAILABLE",
+                                        "description": "Availability of the Lobby"
+                                    },
+                                    "dinningArea": {
+                                        "type": "string",
+                                        "enum" :[
+                                            "available",
+                                            "NOT_AVAILABLE"
+                                        ],
+                                        "default" : "NOT_AVAILABLE",
+                                        "description": "Availability of the Lobby"
+                                    },
+                                    "garden": {
+                                        "type": "string",
+                                        "enum" :[
+                                            "available",
+                                            "NOT_AVAILABLE"
+                                        ],
+                                        "default" : "NOT_AVAILABLE",
+                                        "description": "Availability of the garden"
+                                    },
+                                    "parkingLot": {
+                                        "type": "string",
+                                        "enum" :[
+                                            "available",
+                                            "NOT_AVAILABLE"
+                                        ],
+                                        "default" : "NOT_AVAILABLE",
+                                        "description": "Availability of the parkingLot"
+                                    },
+                                    "alevator": {
+                                        "type": "string",
+                                        "enum" :[
+                                            "available",
+                                            "NOT_AVAILABLE"
+                                        ],
+                                        "default" : "NOT_AVAILABLE",
+                                        "description": "Availability of the alevator"
+                                    },
+                                    "otherAminities": {
+                                        "type": "string",
+                                        "default" : "NOT_AVAILABLE",
+                                        "description": "Description for the avalability of other Aminities property has to offer"
+                                    },
+                                    "furnishedStatus": {
+                                        "type": "string",
+                                        "enum" :[
+                                            "Full Furnished",
+                                            "Partial Furnished",
+                                            "Unfurnished"
+                                        ],
+                                        "default" : "Unfurnished",
+                                        "description": "provides furnished status of the property"
+                                    }
+                                },
+                                "required": [
+                                    "projectId",
+                                    "propertyNumber",
+                                    "email"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Returns The created Property as an Object of properties",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "This Object contains all the related data to the Property"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    },
+                    "404": {
+                        "description": "Data not Found"
+                    },
+                    "default": {
+                        "description": "Unexpected error"
+                    }
+                }
+            },
+
+            "put" : {
+            },
+
+            "delete" : {
+                "tags" : [
+                    "properties"
+                ],
+                "summary" : "Delete Property using propertyId",
+                "description" : "Pass propertyId in <b>Query Params</b> to delete the property corresponding to that Property",
+                "operationId" : "deleteProperty",
+                "parameters" : [
+                    {
+                        "name" : "propertyId",
+                        "in" : "query",
+                        "required" : true,
+                        "description" : "Delete property using porpertyId",
+                        "schema" : {
+                            "type" : "integer",
+                            "format" : "int32",
+                            "minimum" : 0
+                        }
+                    }
+                ],
+
+                "responses" : {
+                    "200" : {
+                        "description" : "Delete the Property Node and <b>Relationship Type <i>BELONGS_TO</i></b>",
+                        "content" : {
+                            "application/json" : {
+                                "schema" : {
+                                    "type" : "string",
+                                    "description" : "Returns a message confirms Property is deleted"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    },
+                    "404": {
+                        "description": "propertyId not Found"
+                    },
+                    "default": {
+                        "description": "Unexpected error"
+                    }
+                }
+                
+            }
+        }
+
+    },
+
+    "components": {
+        "schemas": {}
+    }
+}

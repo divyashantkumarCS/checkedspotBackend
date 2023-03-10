@@ -1,9 +1,11 @@
 import cors from 'cors';
 import driver from './config/neo4jconfig.js';
+import swaggerUi from 'swagger-ui-express';
+import swaggerDocument from './swagger.json' assert { type: "json" };
 import { app, serverlistner, express } from './config/expressConfig.js';
 import userRouter from './routes/user.js';
 import propertyRouter from './routes/property.js';
-import projectRouter from  './routes/project.js'
+import projectRouter from  './routes/project.js';
 
 // for parsing application/json
 app.use(express.json()); 
@@ -15,10 +17,11 @@ app.use(cors());
 app.use(express.static('uploads'));
 
 
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-app.use('/users', userRouter);
-app.use('/properties', propertyRouter);
-app.use('/project', projectRouter)
+app.use('/user', userRouter);
+app.use('/property', propertyRouter);
+app.use('/project', projectRouter);
 
 
 driver.close();

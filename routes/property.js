@@ -1,10 +1,10 @@
 import express from 'express';
-import upload from '../middleware/filesAccessMulter.js'
+// import upload from '../middleware/filesAccessMulter.js'
 import {  
     getAllProperties,
     getPropertiesFromPerson,
     getproperty, 
-    addProperty, 
+    createProperty, 
     deleteProperty, 
     updateproperty,
     updateExpenditure 
@@ -17,11 +17,12 @@ router.get('/getAllProperties', getAllProperties);
 
 router.get('/getPropertiesFromPerson', getPropertiesFromPerson)
 
-router.get('/getProperty', getproperty);
+router.get('/', getproperty);
 
-router.post('/addProperty', upload.array('file'), addProperty);
+router.post('/', createProperty);
+// router.post('/addProperty', upload.array('file'), addProperty);
 
-router.delete('/deleteProperty', deleteProperty);
+router.delete('/', deleteProperty);
 
 router.put('/updateProject', updateproperty);
 
