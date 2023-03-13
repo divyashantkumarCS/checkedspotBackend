@@ -11,7 +11,7 @@ import {
     createDocument,
     getDocument,
     deleteDocument
-} from '../controller/project.js';
+} from '../controller/project.controller.js';
 
 
 const router = express.Router();

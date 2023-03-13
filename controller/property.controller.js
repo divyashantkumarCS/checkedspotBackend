@@ -1,5 +1,6 @@
-import driver from "../config/neo4jconfig.js ";
+import driver from '../utils/neo4jconnection.js';
 import neo4j, { int, Date } from 'neo4j-driver';
+
 
 //getting all properties irrespective of anything
 const getAllProperties = async (req, res) => {

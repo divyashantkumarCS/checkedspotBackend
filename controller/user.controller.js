@@ -1,4 +1,4 @@
-import driver from "../config/neo4jconfig.js";
+import driver from '../utils/neo4jconnection.js';
 import bcrypt from 'bcrypt';
 import neo4j from "neo4j-driver";
 

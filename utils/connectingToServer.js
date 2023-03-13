@@ -1,4 +1,5 @@
 import express from 'express';
+import logger from './logger.js'
 
 const PORT = 9191;
 
@@ -9,9 +10,9 @@ const serverlistner = function() {
         if(err) {
             console.log(err);
         }
-        console.log(`Server is running on PORT : ${PORT}`)
+        logger.info(`Server is running on PORT : ${PORT}`)
     })
 }
 
 // export default express;
-export {PORT, app, serverlistner, express};
+export {PORT, app, serverlistner};

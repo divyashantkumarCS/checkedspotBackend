@@ -5,7 +5,7 @@ import {
     login,
     provideAccess,
     getProjectsForUser
-} from '../controller/user.js'
+} from '../controller/user.controller.js'
 
 const router = express.Router();
 

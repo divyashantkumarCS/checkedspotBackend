@@ -1,5 +1,4 @@
-
-import driver from "../config/neo4jconfig.js";
+import driver from '../utils/neo4jconnection.js';
 import { int, Date } from "neo4j-driver";
 
 

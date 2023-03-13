@@ -8,7 +8,7 @@ import {
     deleteProperty, 
     updateproperty,
     updateExpenditure 
-} from '../controller/property.js';
+} from '../controller/property.controller.js';
 
 const router = express.Router();
 
