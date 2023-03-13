@@ -108,46 +108,15 @@ const deleteProject = async (req, res) => {
     res.status(200).send("Project Deleted Successfully")
 }
 
-const getProjectsForUser = async (req, res) => {
-    const userId = req?.params?.userId;
-
-    const session = driver.session();
-
-    const result = await session.executeRead(
-        tx => tx.run (
-            `
-                MATCH (p:Project {email : $userId})
-                RETURN p
-            `,
-            {
-                userId : userId
-            }
-        )
-    )
-
-    const data = result?.records.map((row) => {
-        return row.get('p').properties
-    })
-
-    if(data){
-        res.status(200).send(data)
-    }else {
-        res.send({
-            "message" : "Data Not Found"
-        })
-    }
-
-}
-
 const getPropertiesForProject = async (req, res) => {
-    const projectId = req?.params?.projectId;
+    const projectId = int(req?.query?.projectId);
 
     const session  = driver.session();
 
     const result  = await session.executeRead(
         tx => tx.run(
             `
-                MATCH (prop:Property {projectId = $projectId})
+                MATCH (prop:Property {projectId : $projectId})
                 RETURN prop
             `,
             {
@@ -167,13 +136,39 @@ const getPropertiesForProject = async (req, res) => {
 
 
 const createExpenditure = async (req, res) => {
-    
+    const email = req?.body?.email;
+    const projectId = int(req?.body?.projectId);
+
+    const session = driver.session();
+
+    const result = await session.executeWrite(
+        tx => tx.run(
+            `
+                MATCH (p:Project) where ID(p) = $projectId
+                MATCH (u:User {email : $email}) 
+                MERGE(ex:Expenditure {projectId : 15, expenditures: "[]", name: "Expenditure"} ) 
+                MERGE (ex)-[:BELONGS_TO]->(p) 
+                MERGE (u)-[:HAS_WRITE_ACCESS]->(ex)
+                RETURN ex
+            `,
+            {
+                projectId : projectId,
+                email : email
+            }
+        )
+    )
+
+    session.close();
+
+    console.log("EXPENDITURE DATA", result.records)
+    const data = result?.records[0]?.get('ex').properties;
+
+    res.status(200).send(data);
 }
 
 
 const getExpenditure = async (req, res) => {
     const projectId = int(req?.query?.projectId);
-
     const session = driver.session();
 
     const result = await session.executeRead(
@@ -281,13 +276,39 @@ const deleteExpenditure = async (req, res) => {
 
 
 const createDocument = async (req, res) => {
-    
+    const email = req?.body?.email;
+    const projectId = int(req?.body?.projectId);
+
+    const session = driver.session();
+
+    const result = await session.executeWrite(
+        tx => tx.run(
+            `
+                MATCH (p:Project) where ID(p) = $projectId 
+                MATCH (u:User) where u.email = $email 
+                MERGE(doc:Document {projectId : 15, documents: "[]", name: "Document"} ) 
+                MERGE (doc)-[:BELONGS_TO]->(p) 
+                MERGE (u)-[:HAS_WRITE_ACCESS]->(doc)
+                RETURN doc
+            `,
+            {
+                projectId : projectId,
+                email : email
+            }
+        )
+    )
+
+    session.close();
+
+    const data = result?.records[0].get('doc').properties;
+
+    res.status(200).send(data);
 }
 
 
 const getDocument = async (req, res) => {
     const projectId = int(req?.query?.projectId);
-
+    console.log("projectId ", projectId)
     const session = driver.session();
 
     const result = await session.executeRead(
@@ -303,6 +324,7 @@ const getDocument = async (req, res) => {
     );
 
     const data = result?.records[0]?.get('documents');
+    console.log("data ", data)
 
     res.status(200).send(data);
 }
@@ -394,11 +416,12 @@ export {
     createProject,
     getProject,
     deleteProject,
-    getProjectsForUser,
     getPropertiesForProject,
+    createExpenditure,
     getExpenditure,
     updateExpenditure,
     deleteExpenditure,
+    createDocument,
     getDocument,
     deleteDocument
 }

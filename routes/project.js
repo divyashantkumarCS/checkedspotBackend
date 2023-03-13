@@ -3,39 +3,43 @@ import {
     createProject,
     getProject,
     deleteProject,
-    getProjectsForUser,
     getPropertiesForProject,
+    createExpenditure,
     getExpenditure,
     updateExpenditure,
     deleteExpenditure,
+    createDocument,
     getDocument,
     deleteDocument
-} from '../controller/project.js'
+} from '../controller/project.js';
+
 
 const router = express.Router();
 
 
 
-router.post('/', createProject)
+router.post('/', createProject);
 
-router.get('/', getProject)
+router.get('/', getProject);
 
-router.delete('/', deleteProject)
+router.delete('/', deleteProject);
 
-router.get('/:userId', getProjectsForUser)
-
-router.get('/property/:projectId', getPropertiesForProject)
+router.get('/properties', getPropertiesForProject);
 
 
-router.get('/expenditure', getExpenditure)
+router.post('/expenditure', createExpenditure);
 
-router.put('/expenditure', updateExpenditure)
+router.get('/expenditure', getExpenditure);
 
-router.delete('/expenditure', deleteExpenditure)
+router.put('/expenditure', updateExpenditure);
 
-router.get('/document', getDocument)
+router.delete('/expenditure', deleteExpenditure);
 
-router.delete('/document', deleteDocument)
+router.post('/document', createDocument);
+
+router.get('/document', getDocument);
+
+router.delete('/document', deleteDocument);
 
 
 

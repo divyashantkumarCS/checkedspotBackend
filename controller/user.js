@@ -266,9 +266,43 @@ const provideAccess = async (req, res) => {
 }
 
 
+const getProjectsForUser = async (req, res) => {
+    const userId = req?.query?.userId;
+
+    const session = driver.session();
+
+    const result = await session.executeRead(
+        tx => tx.run (
+            `
+                MATCH (p:Project {email : $userId})
+                RETURN p
+            `,
+            {
+                userId : userId
+            }
+        )
+    )
+
+    const data = result?.records.map((row) => {
+        return row.get('p').properties
+    })
+
+    if(data){
+        res.status(200).send(data)
+    }else {
+        res.send({
+            "message" : "Data Not Found"
+        })
+    }
+
+}
+
+
+
 export  {
     oAuth, 
     register, 
     login,
-    provideAccess
+    provideAccess,
+    getProjectsForUser
 };

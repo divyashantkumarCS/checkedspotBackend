@@ -1,5 +1,6 @@
 {
     "openapi": "3.0.0",
+    
     "info": {
         "title": "checkedspot",
         "description": "",
@@ -61,12 +62,62 @@
             "description": "Operations available to regular Properties"
         },
         {
-            "name" : "functionTest",
+            "name" : "test",
             "description" : "These Operations(HTTP methods) are not tested yet"
         }
     ],
 
     "paths": {
+
+        "/user/projects" : {
+            "get": {
+                "tags": [
+                    "users"
+                ],
+                "summary": "Return All projects for particular userId",
+                "description": "This method returns all the projects CREATED_BY the User using userId",
+                "operationId": "getProjectsByuserId",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "query",
+                        "required": true,
+                        "description": "Use login email as the USERID",
+                        "schema": {
+                            "type": "string",
+                            "description": "Use login email as the USERID"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of Objets of Projects",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "description": "This Object contains all the related data to the Project"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid User ID"
+                    },
+                    "404": {
+                        "description": "User ID not Found"
+                    },
+                    "default": {
+                        "description": "Unexpected error"
+                    }
+                }
+            },
+            "post": {}
+        },
+
         "/project": {
             "get" : {
                 "tags" : [
@@ -94,8 +145,10 @@
                         "description" : "As a response, this endpoint will return details for the particular projectId",
                         "content" : {
                             "application/json" : {
-                                "type" : "object",
-                                "description" : "This Object contains details related to the Project"
+                                "schema" : {
+                                    "type" : "object",
+                                    "description" : "This Object contains details related to the Project"
+                                }
                             }
                         }
                     },
@@ -211,56 +264,7 @@
             }
         },
 
-        "/project/{userId}": {
-            "get": {
-                "tags": [
-                    "projects"
-                ],
-                "summary": "Return All projects for particular userId",
-                "description": "This method returns all the projects CREATED_BY the User using userId",
-                "operationId": "getProjectsByuserId",
-                "parameters": [
-                    {
-                        "name": "userId",
-                        "in": "path",
-                        "required": true,
-                        "description": "Use login email as the USERID",
-                        "schema": {
-                            "type": "string",
-                            "description": "Use login email as the USERID"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Array of Objets of Projects",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "description": "This Object contains all the related data to the Project"
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid User ID"
-                    },
-                    "404": {
-                        "description": "User ID not Found"
-                    },
-                    "default": {
-                        "description": "Unexpected error"
-                    }
-                }
-            },
-            "post": {}
-        },
-
-        "/project/property/{projectId}": {
+        "/project/properties": {
             "get": {
                 "tags": [
                     "projects"
@@ -271,7 +275,7 @@
                 "parameters": [
                     {
                         "name": "projectId",
-                        "in": "path",
+                        "in": "query",
                         "required": true,
                         "description": "Optional server description, e.g. Main (production) server",
                         "schema": {
@@ -373,7 +377,7 @@
         "/project/expenditure": {
             "get": {
                 "tags": [
-                    "functionTest"
+                    "projects"
                 ],
                 "summary": "Returns Expenditure data(Array of Objects) for a particular Project",
                 "description": "To Return Expenditure Data(Array of Objects), this endpoint Accepts <b>projectId</b> in <b>query</b> params",
@@ -397,10 +401,55 @@
                         "description" : "Array of Objects will be return to the user of this endpoint",
                         "content" : {
                             "application/json" : {
-                                "type" : "array",
-                                "items": {
-                                    "type": "object",
-                                    "description": "individual expenses"
+                                "schema" : {                                    
+                                    "type" : "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties" : {
+                                            "projectId" : {
+                                                "type" : "integer",
+                                                "format" : "int32",
+                                                "minimum" : 0,
+                                                "description" : "projectId"
+                                            },
+                                            "type" : {
+                                                "type" : "string",
+                                                "description" : ""
+                                            },
+                                            "spentOn" : {
+                                                "type" : "string",
+                                                "format" : "date-time",
+                                                "description" : ""
+                                            },
+                                            "spentBy" : {
+                                                "type" : "string",
+                                                "description" : ""
+                                            },
+                                            "amount" : {
+                                                "type" : "integer",
+                                                "format" : "int32",
+                                                "minimum" : 1,
+                                                "description" : ""
+                                            },
+                                            "currency" : {
+                                                "type" : "string",
+                                                "description" : ""
+                                            },
+                                            "description" : {
+                                                "type" : "string",
+                                                "description" : ""
+                                            },
+                                            "spentUsing" : {
+                                                "type" : "string",
+                                                "description" : ""
+                                            },
+                                            "attachment" : {
+                                                "type" : "string",
+                                                "format" : "url",
+                                                "description" : ""
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -418,7 +467,62 @@
             },
 
             "post": {
+                "tags" :[
+                    "projects"
+                ],
+                "summary" : "Creates and Return Expenditure Node if not Exists",
+                "description" : "This endpoint takes user <b>email</b> and <b>projectId</b> to which <b>Expenditure Node</b> will belong",
+                "operationId" : "createExpenditure",
 
+                "requestBody" : {
+                    "content" : {
+                        "application/x-www-form-urlencoded" : {
+                            "schema" : {
+                                "type" : "object",
+                                "properties" : {
+                                    "email" : {
+                                        "type" : "string",
+                                        "format" : "email",
+                                        "description" : "user email to which the project belongs and expenditure node belongs to this project"
+                                    },
+                                    "projectId" : {
+                                        "type" : "integer",
+                                        "format" : "int32",
+                                        "minimum" : 0,
+                                        "description" : "This projectId belongs to the Project for which the Expenditure node will be created if not exists already"
+                                    }
+                                },
+                                "required" : [
+                                    "email",
+                                    "projectId"
+                                ]
+                            }
+                        }
+                    }
+                },
+
+                "responses": {
+                    "200": {
+                        "description": "As a response, this endpoint will return an Object contained properties of the expenditure node in it",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "This Object contains properties of the expenditure node"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    },
+                    "404": {
+                        "description": "Data not Found"
+                    },
+                    "default": {
+                        "description": "Unexpected error"
+                    }
+                }
             },
 
             "put": {
@@ -555,7 +659,7 @@
         "/project/document": {
             "get": {
                 "tags": [
-                    "functionTest"
+                    "test"
                 ],
                 "summary": "Returns Document data(Array of Objects) for a particular Project",
                 "description": "To Return Document Data(Array of Objects), this endpoint Accepts <b>projectId</b> in <b>query</b> params",
@@ -600,7 +704,62 @@
             },
 
             "post": {
+                "tags" :[
+                    "projects"
+                ],
+                "summary" : "Creates and Return Document Node if not Exists",
+                "description" : "This endpoint takes user <b>email</b> and <b>projectId</b> to which <b>Document Node</b> will belongs",
+                "operationId" : "createDocument",
 
+                "requestBody" : {
+                    "content" : {
+                        "application/x-www-form-urlencoded" : {
+                            "schema" : {
+                                "type" : "object",
+                                "properties" : {
+                                    "email" : {
+                                        "type" : "string",
+                                        "format" : "email",
+                                        "description" : "user email to which the project belongs and Document node belongs to this project"
+                                    },
+                                    "projectId" : {
+                                        "type" : "integer",
+                                        "format" : "int32",
+                                        "minimum" : 0,
+                                        "description" : "This projectId belongs to the Project for which the Document node will be created if not exists already"
+                                    }
+                                },
+                                "required" : [
+                                    "email",
+                                    "projectId"
+                                ]
+                            }
+                        }
+                    }
+                },
+
+                "responses": {
+                    "200": {
+                        "description": "As a response, this endpoint will return an Object contained properties of the Document node in it",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "This Object contains properties of the Document node"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    },
+                    "404": {
+                        "description": "Data not Found"
+                    },
+                    "default": {
+                        "description": "Unexpected error"
+                    }
+                }
             },
 
             "put": {
@@ -609,7 +768,7 @@
 
             "delete": {
                 "tags": [
-                    "functionTest"
+                    "projects"
                 ],
                 "summary": "Returns confirmation message for the deletion of the <b>Document Node",
                 "description": "To delete <b>Document Node</b>, this endpoint Accepts <b>projectId</b> in <b>query</b> params.",

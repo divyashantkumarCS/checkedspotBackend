@@ -3,7 +3,8 @@ import {
     oAuth, 
     register, 
     login,
-    provideAccess
+    provideAccess,
+    getProjectsForUser
 } from '../controller/user.js'
 
 const router = express.Router();
@@ -16,6 +17,8 @@ router.post('/register', register);
 router.post('/login', login);
 
 router.post('/provideAccess', provideAccess);
+
+router.get('/projects', getProjectsForUser)
 
 
 export default router;
